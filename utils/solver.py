@@ -4,7 +4,7 @@ import torch
 from collections import namedtuple
 from scipy.io import savemat
 from utils import logger
-from utils.statics import AverageMeter, evaluator
+from utils.statics import AverageMeter
 
 __all__ = ['Trainer', 'Tester']
 
@@ -142,12 +142,15 @@ class Trainer:
     def _iteration(self, data_loader):
         iter_loss = AverageMeter('Iter loss')
         iter_time = AverageMeter('Iter time')
+        iter_loss1 = AverageMeter('Iter loss1')
+        iter_mse = AverageMeter('Iter mse')
         time_tmp = time.time()
         if self.phase==1:
-            for batch_idx, (h, ) in enumerate(data_loader):
-                h = h.to(self.device)
-                x_pred = self.model(h)
-                loss = self.criterion(h,x_pred)
+            for batch_idx, (ht,hsc ) in enumerate(data_loader):
+                ht = ht.to(self.device)
+                hsc = hsc.to(self.device)
+                wf = self.model(ht)
+                loss = self.criterion(ht,hsc,wf)
                 
                 # Scheduler update, backward pass and optimization
                 if self.model.training:
@@ -165,16 +168,18 @@ class Trainer:
                     logger.info(f'Epoch: [{self.cur_epoch}/{self.all_epoch}]'
                                 f'[{batch_idx + 1}/{len(data_loader)}] '
                                 f'Balance loss: {iter_loss.avg:.3e} | '
-                                f'time: {iter_time.avg:.3f}')
+                                f'time: {iter_time.avg:.3f}',file='./loggerp1.text')
 
             mode = 'Train' if self.model.training else 'Val'
-            logger.info(f'=> {mode}  Loss: {iter_loss.avg:.3e}\n')
+            logger.info(f'=> {mode}  Loss: {iter_loss.avg:.3e}\n',file='./loggerp1.text')
         else:
-            for batch_idx, (h1,h2, ) in enumerate(data_loader):
-                h1 = h1.to(self.device)
-                h2 = h2.to(self.device)
-                f1,f2 = self.model(h1,h2)
-                loss,loss1,loss2,loss3 = self.criterion(h1,h2,f1,f2)
+            for batch_idx, (ht1,ht2,hsc1,hsc2, ) in enumerate(data_loader):
+                ht1 = ht1.to(self.device)
+                ht2 = ht2.to(self.device)
+                hsc1 = hsc1.to(self.device)
+                hsc2 = hsc2.to(self.device)
+                wf1,wf2 = self.model(ht1,ht2)
+                loss,loss1,loss2,loss3 = self.criterion(ht1,ht2,hsc1,hsc2,wf1,wf2)
                 
                 # Scheduler update, backward pass and optimization
                 if self.model.training:
@@ -184,6 +189,8 @@ class Trainer:
 
                 # Log and visdom update
                 iter_loss.update(loss)
+                iter_loss1.update(loss1)
+                iter_mse.update(loss3)
                 iter_time.update(time.time() - time_tmp)
                 time_tmp = time.time()
 
@@ -192,10 +199,12 @@ class Trainer:
                     logger.info(f'Epoch: [{self.cur_epoch}/{self.all_epoch}]'
                                 f'[{batch_idx + 1}/{len(data_loader)}] '
                                 f'Balance loss: {iter_loss.avg:.3e} | '
-                                f'time: {iter_time.avg:.3f}')
+                                f'loss1: {iter_loss1.avg:.3e} | '
+                                f'mse: {iter_mse.avg:.3e} | '
+                                f'time: {iter_time.avg:.3f}',file='./loggerp2.text')
 
             mode = 'Train' if self.model.training else 'Val'
-            logger.info(f'=> {mode}  Loss: {iter_loss.avg:.3e}\n')
+            logger.info(f'=> {mode}  Loss: {iter_loss.avg:.3e} | loss1: {iter_loss1.avg:.3e} | mse: {iter_mse.avg:.3e} \n',file='./loggerp2.text')
         return iter_loss.avg
 
     def _save(self, state, name):
@@ -264,8 +273,8 @@ class Trainer:
 
         # print current best results
         if self.best_loss.loss is not None:
-            print(f'\n=! Best loss: {self.best_loss.loss:.3e} '
-                  f'epoch={self.best_loss.epoch})')
+            logger.info(f'\n=! Best loss: {self.best_loss.loss:.3e} '
+                  f'epoch={self.best_loss.epoch})',file='./loggerp1.text')
     def _loop_postprocessing1(self, loss,loss1,loss3):
         r""" private function which makes loop() function neater.
         """
@@ -295,15 +304,15 @@ class Trainer:
 
         # print current best results
         if self.best_loss.loss is not None:
-            print(f'\n=! Best loss: {self.best_loss.loss:.3e} '
+            logger.info(f'\n=! Best loss: {self.best_loss.loss:.3e} '
                   f'epoch={self.best_loss.epoch})'
                   f'corresponding mse={self.best_loss.mse})'
-                  f'corresponding loss1={self.best_loss.loss1})')        
+                  f'corresponding loss1={self.best_loss.loss1})',file='./loggerp2.text')        
         if self.best_mse.mse is not None:
-            print(f'\n=! Best mse: {self.best_mse.mse:.3e} '
+            logger.info(f'\n=! Best mse: {self.best_mse.mse:.3e} '
                   f'epoch={self.best_mse.epoch})'
                   f'corresponding loss={self.best_mse.loss})'
-                  f'corresponding loss1={self.best_mse.loss1})')
+                  f'corresponding loss1={self.best_mse.loss1})',file='./loggerp2.text')
 
 
 class Tester:
@@ -339,10 +348,11 @@ class Tester:
             iter_time = AverageMeter('Iter time')
             time_tmp = time.time()
 
-            for batch_idx, (h,) in enumerate(data_loader):
-                h = h.to(self.device)
-                x_pred = self.model(h,)
-                loss = self.criterion(h,x_pred)
+            for batch_idx, (ht,hsc ) in enumerate(data_loader):
+                ht = ht.to(self.device)
+                hsc = hsc.to(self.device)
+                wf = self.model(ht)
+                loss = self.criterion(ht,hsc,wf)
                 # Log and visdom update
                 iter_loss.update(loss)
                 iter_time.update(time.time() - time_tmp)
@@ -351,9 +361,9 @@ class Tester:
                 # plot progress
                 if (batch_idx + 1) % self.print_freq == 0:
                     logger.info(f'[{batch_idx + 1}/{len(data_loader)}] '
-                                f'loss: {iter_loss.avg:.3e} | time: {iter_time.avg:.3f}')
+                                f'loss: {iter_loss.avg:.3e} | time: {iter_time.avg:.3f}',file='./loggerp1.text')
 
-            logger.info(f'=> Test loss:{iter_loss.avg:.3e} \n')
+            logger.info(f'=> Test loss:{iter_loss.avg:.3e} \n',file='./loggerp1.text')
             return iter_loss.avg
         else:
             iter_loss = AverageMeter('Iter loss')
@@ -363,11 +373,13 @@ class Tester:
             iter_time = AverageMeter('Iter time')
             time_tmp = time.time()
 
-            for batch_idx, (h1,h2,) in enumerate(data_loader):
-                h1 = h1.to(self.device)
-                h2 = h2.to(self.device)
-                f1,f2 = self.model(h1,h2)
-                loss,loss1,loss2,loss3 = self.criterion(h1,h2,f1,f2)
+            for batch_idx, (ht1,ht2,hsc1,hsc2, ) in enumerate(data_loader):
+                ht1 = ht1.to(self.device)
+                ht2 = ht2.to(self.device)
+                hsc1 = hsc1.to(self.device)
+                hsc2 = hsc2.to(self.device)
+                wf1,wf2 = self.model(ht1,ht2)
+                loss,loss1,loss2,loss3 = self.criterion(ht1,ht2,hsc1,hsc2,wf1,wf2)
                 # Log and visdom update
                 iter_loss.update(loss)
                 iter_loss1.update(loss1)
@@ -382,8 +394,8 @@ class Tester:
                                 f'loss: {iter_loss.avg:.3e} | time: {iter_time.avg:.3f}'
                                 f'loss1: {iter_loss1.avg:.3e} | time: {iter_time.avg:.3f}'
                                 f'loss2: {iter_loss2.avg:.3e} | time: {iter_time.avg:.3f}'
-                                f'loss3: {iter_loss3.avg:.3e} | time: {iter_time.avg:.3f}')
+                                f'mse: {iter_loss3.avg:.3e} | time: {iter_time.avg:.3f}',file='./loggerp2.text')
 
-            logger.info(f'=> Test loss:{iter_loss.avg:.3e} loss1: {iter_loss1.avg:.3e} loss2: {iter_loss2.avg:.3e} loss3: {iter_loss3.avg:.3e}\n')
+            logger.info(f'=> Test loss:{iter_loss.avg:.3e} loss1: {iter_loss1.avg:.3e} loss2: {iter_loss2.avg:.3e} mse: {iter_loss3.avg:.3e}\n',file='./loggerp2.text')
 
             return iter_loss.avg,iter_loss1.avg,iter_loss2.avg,iter_loss3.avg
