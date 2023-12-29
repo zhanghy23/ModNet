@@ -6,7 +6,6 @@ import hdf5storage as hdf5
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-__all__ = ['qiku2022DataLoader', 'PreFetcher']
 
 
 class PreFetcher:
@@ -62,17 +61,23 @@ class datasetLoader1(object):
 
         dir_trainH = os.path.join(root, "H_train_360.mat")#路径拼接
         dir_testH = os.path.join(root, "H_test_360.mat")#路径拼接
+        dir_trainH_label = os.path.join(root, "H_train_360_label.mat")#路径拼接
+        dir_testH_label = os.path.join(root, "H_test_360_label.mat")#路径拼接
     #    channel, xs, ys = 1, 4, 4
 
         # Training data loading
         data_trainH = hdf5.loadmat(dir_trainH)['H_train']
         data_trainH = torch.tensor(data_trainH, dtype=torch.float32)
-        self.train_dataset = TensorDataset(data_trainH)#按照第一维度切片
+        data_trainH_label = hdf5.loadmat(dir_trainH_label)['H_train_label']
+        data_trainH_label = torch.tensor(data_trainH_label, dtype=torch.float32)
+        self.train_dataset = TensorDataset(data_trainH,data_trainH_label)#按照第一维度切片
 
         # Test data loading, including the sparse data and the raw data
         data_testH = hdf5.loadmat(dir_testH)['H_test']
         data_testH = torch.tensor(data_testH, dtype=torch.float32)
-        self.test_dataset = TensorDataset(data_testH)#按照第一维度切片
+        data_testH_label = hdf5.loadmat(dir_testH_label)['H_test_label']
+        data_testH_label = torch.tensor(data_testH_label, dtype=torch.float32)
+        self.test_dataset = TensorDataset(data_testH,data_testH_label)#按照第一维度切片
 
 
     def __call__(self):#只要一个类定义了_call_，那么就可以直接调用那个类的名字作为函数__call__使用
@@ -105,20 +110,28 @@ class datasetLoader2(object):
 
         dir_trainH = os.path.join(root, "H_train_360.mat")#路径拼接
         dir_testH = os.path.join(root, "H_test_360.mat")#路径拼接
+        dir_trainH_label = os.path.join(root, "H_train_360_label.mat")#路径拼接
+        dir_testH_label = os.path.join(root, "H_test_360_label.mat")#路径拼接
     #    channel, xs, ys = 1, 4, 4
 
         data_trainH = hdf5.loadmat(dir_trainH)['H_train']
         data_trainH1 = torch.tensor(data_trainH, dtype=torch.float32)
+        data_trainH_label = hdf5.loadmat(dir_trainH_label)['H_train_label']
+        data_trainH1_label = torch.tensor(data_trainH_label, dtype=torch.float32)
         idx = torch.randperm(data_trainH1.shape[0])
         data_trainH2 = data_trainH1[idx,:,:,:].view(data_trainH1.size())
-        self.train_dataset = TensorDataset(data_trainH1,data_trainH2)#按照第一维度切片
+        data_trainH2_label = data_trainH1_label[idx,:,:,:].view(data_trainH1_label.size())
+        self.train_dataset = TensorDataset(data_trainH1,data_trainH2,data_trainH1_label,data_trainH2_label)#按照第一维度切片
 
         # Test data loading, including the sparse data and the raw data
         data_testH = hdf5.loadmat(dir_testH)['H_test']
         data_testH1 = torch.tensor(data_testH, dtype=torch.float32)
+        data_testH_label = hdf5.loadmat(dir_testH_label)['H_test_label']
+        data_testH1_label = torch.tensor(data_testH_label, dtype=torch.float32)
         idx = torch.randperm(data_testH1.shape[0])
-        data_testH2 = data_testH1[idx,:,:,:].view(data_testH1.size())        
-        self.test_dataset = TensorDataset(data_testH1,data_testH2)#按照第一维度切片
+        data_testH2 = data_testH1[idx,:,:,:].view(data_testH1.size())
+        data_testH2_label = data_testH1_label[idx,:,:,:].view(data_testH1_label.size())        
+        self.test_dataset = TensorDataset(data_testH1,data_testH2,data_testH1_label,data_testH2_label)#按照第一维度切片
 
     def __call__(self):#只要一个类定义了_call_，那么就可以直接调用那个类的名字作为函数__call__使用
         train_loader = DataLoader(self.train_dataset,
