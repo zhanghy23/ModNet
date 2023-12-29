@@ -2,7 +2,7 @@ import os
 import random
 import thop
 import torch
-from models.crnet import crnet,blnet
+from models.modnet import modnet,modnets
 
 from utils import logger
 from utils.logger import line_seg
@@ -44,16 +44,16 @@ def init_device(seed=None, cpu=None, gpu=None, affinity=None):
 def init_model(args):
     # Model loading
     if args.phase==1:
-        model = crnet(phase=1)
-        image1 = torch.randn([1, 2, 128, 128])
-        flops, params = thop.profile(model, inputs=(image1,), verbose=False)#利用前向传输计算参数量
-        flops, params = thop.clever_format([flops, params], "%.3f")
+        model = modnet(phase=1)
+        image1 = torch.randn([1, 2, 152, 152])
+        # flops, params = thop.profile(model, inputs=(image1,), verbose=False)#利用前向传输计算参数量
+        # flops, params = thop.clever_format([flops, params], "%.3f")
     else:
-        model = blnet()
-        image1 = torch.randn([1, 2, 128, 128])
-        image2 = torch.randn([1, 2, 128, 128])
-        flops, params = thop.profile(model, inputs=(image1,image2), verbose=False)#利用前向传输计算参数量
-        flops, params = thop.clever_format([flops, params], "%.3f")
+        model = modnets()
+        image1 = torch.randn([1, 2, 152, 152])
+        image2 = torch.randn([1, 2, 152, 152])
+        # flops, params = thop.profile(model, inputs=(image1,image2), verbose=False)#利用前向传输计算参数量
+        # flops, params = thop.clever_format([flops, params], "%.3f")
     if args.pretrained is not None:
         assert os.path.isfile(args.pretrained)
         state_dict = torch.load(args.pretrained,
