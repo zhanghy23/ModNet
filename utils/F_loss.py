@@ -97,7 +97,7 @@ class Diagloss(nn.Module):
         He_diag = He.diagonal(dim1=-1,dim2=-2)
         W = w[:,0,:,:]*w[:,0,:,:]+w[:,1,:,:]*w[:,1,:,:]
         mm,mmm=torch.min(torch.log2(1+(He_diag/((torch.sum(He,dim=2)-He_diag)+sigma*torch.sum(W,dim=2)))),dim=1)
-        # mm2,mmm=torch.min(torch.log2(1+(H_h_diag/((torch.sum(H_h,dim=2)-H_h_diag)+sigma))),dim=1)
+        mm2,mmm=torch.min(torch.log2(1+(H_h_diag/((torch.sum(H_h,dim=2)-H_h_diag)+sigma))),dim=1)
         loss2=torch.sum(torch.log2(1+(He_diag/((torch.sum(He,dim=2)-He_diag)+sigma*torch.sum(W,dim=2)))),dim=1)
         loss=loss1-loss2+128*(-mm)
 
