@@ -29,8 +29,8 @@ class Balanceloss(nn.Module):
         He1_diag = He1.diagonal(dim1=-1,dim2=-2)
         W1 = w1[:,0,:,:]*w1[:,0,:,:]+w1[:,1,:,:]*w1[:,1,:,:]
         mm,mmm=torch.min(torch.log2(1+(He1_diag/((torch.sum(He1,dim=2)-He1_diag)+sigma*torch.sum(W1,dim=2)))),dim=1)
-        # mm2,mmm=torch.min(torch.log2(1+(H1_h_diag/((torch.sum(H1_h,dim=2)-H1_h_diag)+sigma))),dim=1)
-        loss1=torch.sum(torch.log2(1+(H1_h_diag/((torch.sum(H1_h,dim=2)-H1_h_diag)+sigma))),dim=1)-torch.sum(torch.log2(1+(He1_diag/((torch.sum(He1,dim=2)-He1_diag)+sigma*torch.sum(W1,dim=2)))),dim=1)+128*(-mm)
+        mm2,mmm=torch.min(torch.log2(1+(H1_h_diag/((torch.sum(H1_h,dim=2)-H1_h_diag)+sigma))),dim=1)
+        loss1=torch.sum(torch.log2(1+(H1_h_diag/((torch.sum(H1_h,dim=2)-H1_h_diag)+sigma))),dim=1)-torch.sum(torch.log2(1+(He1_diag/((torch.sum(He1,dim=2)-He1_diag)+sigma*torch.sum(W1,dim=2)))),dim=1)+128*(mm2-mm)
 
     
         H2_h = hsc2[:,0,:,:]*hsc2[:,0,:,:]+hsc2[:,1,:,:]*hsc2[:,1,:,:]
@@ -52,8 +52,8 @@ class Balanceloss(nn.Module):
         He2_diag = He2.diagonal(dim1=-1,dim2=-2)
         W2 = w2[:,0,:,:]*w2[:,0,:,:]+w2[:,1,:,:]*w2[:,1,:,:]
         mm,mmm=torch.min(torch.log2(1+(He2_diag/((torch.sum(He2,dim=2)-He2_diag)+sigma*torch.sum(W2,dim=2)))),dim=1)
-        # mm2,mmm=torch.min(torch.log2(1+(H2_h_diag/((torch.sum(H2_h,dim=2)-H2_h_diag)+sigma))),dim=1)
-        loss2=torch.sum(torch.log2(1+(H2_h_diag/((torch.sum(H2_h,dim=2)-H2_h_diag)+sigma))),dim=1)-torch.sum(torch.log2(1+(He2_diag/((torch.sum(He2,dim=2)-He2_diag)+sigma*torch.sum(W2,dim=2)))),dim=1)+128*(-mm)
+        mm2,mmm=torch.min(torch.log2(1+(H2_h_diag/((torch.sum(H2_h,dim=2)-H2_h_diag)+sigma))),dim=1)
+        loss2=torch.sum(torch.log2(1+(H2_h_diag/((torch.sum(H2_h,dim=2)-H2_h_diag)+sigma))),dim=1)-torch.sum(torch.log2(1+(He2_diag/((torch.sum(He2,dim=2)-He2_diag)+sigma*torch.sum(W2,dim=2)))),dim=1)+128*(mm2-mm)
 
 
         MSE1_r = w1[:,0,:,:]-w2[:,0,:,:]
@@ -99,7 +99,7 @@ class Diagloss(nn.Module):
         mm,mmm=torch.min(torch.log2(1+(He_diag/((torch.sum(He,dim=2)-He_diag)+sigma*torch.sum(W,dim=2)))),dim=1)
         mm2,mmm=torch.min(torch.log2(1+(H_h_diag/((torch.sum(H_h,dim=2)-H_h_diag)+sigma))),dim=1)
         loss2=torch.sum(torch.log2(1+(He_diag/((torch.sum(He,dim=2)-He_diag)+sigma*torch.sum(W,dim=2)))),dim=1)
-        loss=loss1-loss2+128*(-mm)
+        loss=loss1-loss2+128*(mm2-mm)
 
         loss=torch.mean(loss)
 
