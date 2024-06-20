@@ -98,10 +98,9 @@ class ModNets(nn.Module):
         return outh,out
 
 def modnet(phase):
-    r""" Create a proposed CRNet.
+    r""" Create a proposed ModNet.
 
-    :param reduction: the reciprocal of compression ratio
-    :return: an instance of CRNet
+    :return: an instance of ModNet
     """
     model = ModNet()
     if phase==2:
